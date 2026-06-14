@@ -107,7 +107,10 @@ def game_web_search(question: str, memory: Optional["LongTermMemory"] = None,
     if memory is not None:
         hits = memory.search(question, k=1)
         if hits and hits[0]["score"] > 0.92:
-            return {"source": "memory", "answer": hits[0]["content"], "results": []}
+            src = hits[0].get("source")
+            results = [{"title": "Remembered source", "url": src,
+                        "content": hits[0]["content"]}] if src else []
+            return {"source": "memory", "answer": hits[0]["content"], "results": results}
 
     from tavily import TavilyClient
 
@@ -198,6 +201,7 @@ class Agent:
             messages = [{"role": "system", "content": SYSTEM_INSTRUCTIONS}]
         messages.append({"role": "user", "content": query})
 
+        web_citations: list[str] = []
         for _ in range(self.max_steps):
             response = self._llm_node(messages)
             msg = response.choices[0].message
@@ -208,11 +212,21 @@ class Agent:
             for tc in tool_calls:
                 args = json.loads(tc.function.arguments or "{}")
                 result = self._dispatch_tool(tc.function.name, args)
+                if tc.function.name == "game_web_search" and isinstance(result, dict):
+                    for r in result.get("results", []):
+                        url = r.get("url")
+                        if url:
+                            title = r.get("title") or "Source"
+                            web_citations.append(f"{title} - {url}")
                 messages.append({"role": "tool", "tool_call_id": tc.id,
                                  "name": tc.function.name,
                                  "content": json.dumps(result)})
 
         final_content = messages[-1].get("content") or ""
         answer = self._format_answer(query, final_content)
+        if web_citations:
+            # Prefer the concrete Tavily URLs over the LLM's label-only citations.
+            answer.citations = list(dict.fromkeys(web_citations + (answer.citations or [])))
+            answer.source = "web"
         self.sessions[session_id] = messages  # persist short-term memory
         return answer
