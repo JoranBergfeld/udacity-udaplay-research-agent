@@ -1,0 +1,31 @@
+[project]
+name = "udaplay"
+version = "0.1.0"
+description = "UdaPlay RAPTOR + SAC research agent"
+requires-python = ">=3.11"
+dependencies = [
+    "chromadb>=0.5.0",
+    "openai>=1.40.0",
+    "tavily-python>=0.5.0",
+    "python-dotenv>=1.0.0",
+    "umap-learn>=0.5.6",
+    "scikit-learn>=1.4.0",
+    "numpy>=1.26.0",
+    "pandas>=2.2.0",
+    "requests>=2.32.0",
+    "matplotlib>=3.8.0",
+    "graphviz>=0.20.0",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.0.0", "pytest-mock>=3.14.0", "ipykernel>=6.29.0", "jupyterlab>=4.0.0"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["udaplay"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
